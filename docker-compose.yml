@@ -6,8 +6,12 @@ services:
     ports:
       - '3000:3000'
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       MONGO_URI: mongodb://root:root@mongo:27017/breizhsport?authSource=admin # Connexion à MongoDB avec l'URI
+    volumes:
+      - .:/usr/src/app # Synchronise les fichiers locaux avec le conteneur
+      - /usr/src/app/node_modules # Ignore les node_modules locaux
+    command: npm run start:dev # Lance le mode développement
     depends_on:
       - mongo
     networks:

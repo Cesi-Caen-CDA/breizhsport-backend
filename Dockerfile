@@ -10,14 +10,14 @@ COPY package*.json ./
 # Installe les dépendances
 RUN npm install
 
+# Installe le CLI NestJS globalement pour le mode développement
+RUN npm install -g @nestjs/cli
+
 # Copie le reste des fichiers de l'application
 COPY . .
-
-# Compile le projet (si TypeScript est utilisé)
-RUN npm run build
 
 # Expose le port sur lequel NestJS fonctionne (par défaut 3000)
 EXPOSE 3000
 
-# Commande pour démarrer l'application
-CMD ["npm", "run", "start:prod"]
+# Commande pour démarrer l'application en mode développement
+CMD ["npm", "run", "start:dev"]
