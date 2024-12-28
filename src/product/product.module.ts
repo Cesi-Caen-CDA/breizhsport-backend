@@ -10,5 +10,6 @@ import { ProductController } from './controllers/product.controller';
   ],
   controllers: [ProductController],
   providers: [ProductService],
+  exports: [ProductService],
 })
 export class ProductModule {}
