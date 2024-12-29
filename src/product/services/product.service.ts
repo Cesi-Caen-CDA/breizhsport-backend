@@ -23,9 +23,12 @@ export class ProductService {
     return this.productModel.findById(id).exec();
   }
 
-  async update(id: string, updateUserDto: UpdateProductDto): Promise<Product> {
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+  ): Promise<Product> {
     return this.productModel
-      .findByIdAndUpdate(id, updateUserDto, { new: true })
+      .findByIdAndUpdate(id, updateProductDto, { new: true })
       .exec();
   }
 

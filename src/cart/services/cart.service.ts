@@ -84,4 +84,30 @@ export class CartService {
     }
     return cart;
   }
+
+  async removeProductFromCart(user: User, productId: string): Promise<Cart> {
+    const productObjectId = new Types.ObjectId(productId);
+
+    const cart = await this.cartModel.findOne({
+      user: user._id,
+      checkedOut: false,
+    });
+
+    if (!cart) {
+      throw new Error('Panier non trouvé');
+    }
+
+    const productIndex = cart.products.findIndex(
+      (p) => p.product.toString() === productObjectId.toString(),
+    );
+
+    if (productIndex === -1) {
+      throw new Error('Produit non trouvé dans le panier');
+    }
+
+    cart.products.splice(productIndex, 1); // Supprime le produit du panier
+
+    await cart.save(); // Sauvegarde les modifications
+    return cart;
+  }
 }

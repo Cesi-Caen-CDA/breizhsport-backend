@@ -17,8 +17,8 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Post()
-  async create(@Body() createUserDto: CreateProductDto) {
-    return this.productService.create(createUserDto);
+  async create(@Body() createProductDto: CreateProductDto) {
+    return this.productService.create(createProductDto);
   }
 
   @Get()
@@ -31,15 +31,15 @@ export class ProductController {
     return this.productService.findOne(id);
   }
 
-  @Put(':id')
+  @Put('update/:id')
   async update(
     @Param('id') id: string,
-    @Body() updateUserDto: UpdateProductDto,
+    @Body() updateProductDto: UpdateProductDto,
   ) {
-    return this.productService.update(id, updateUserDto);
+    return this.productService.update(id, updateProductDto);
   }
 
-  @Delete(':id')
+  @Delete('delete/:id')
   async remove(@Param('id') id: string) {
     return this.productService.remove(id);
   }

@@ -73,4 +73,23 @@ export class OrderService {
     // Retourner la commande
     return order;
   }
+
+  async getOrderHistory(userId: string): Promise<Order[]> {
+    const orderHistory = await this.orderModel
+      .find({
+        user: userId, // Filtrer par utilisateur
+      })
+      .populate({
+        path: 'products.product', // Peupler les informations des produits
+        select: 'name price category description stock', // Sélectionner les champs nécessaires
+      });
+
+    if (!orderHistory || orderHistory.length === 0) {
+      throw new Error(
+        'Aucun historique de commandes trouvé pour cet utilisateur',
+      );
+    }
+
+    return orderHistory;
+  }
 }

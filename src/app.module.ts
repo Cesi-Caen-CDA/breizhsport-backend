@@ -4,9 +4,10 @@ import { DatabaseModule } from './database/database.module';
 import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
 import { CartModule } from './cart/cart.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [UserModule, DatabaseModule, ProductModule, OrderModule, CartModule],
+  imports: [UserModule, DatabaseModule, ProductModule, OrderModule, CartModule, AuthModule],
   controllers: [],
   providers: [],
 })

@@ -1,10 +1,9 @@
 // src/cart/controllers/cart.controller.ts
-import { Controller, Post, Param, Body, Get } from '@nestjs/common';
+import { Controller, Post, Param, Body, Get, Delete } from '@nestjs/common';
 import { CartService } from '../services/cart.service';
-import { ProductService } from '../../product/services/product.service';
 import { UserService } from '../../user/services/user.service';
 
-@Controller('cart')
+@Controller('carts')
 export class CartController {
   constructor(
     private cartService: CartService,
@@ -24,5 +23,14 @@ export class CartController {
   @Get(':userId')
   async getCart(@Param('userId') userId: string) {
     return this.cartService.getCartForUser(userId);
+  }
+
+  @Delete('remove/:productId')
+  async removeProductFromCart(
+    @Param('productId') productId: string,
+    @Body('userId') userId: string,
+  ) {
+    const user = await this.userService.findOne(userId);
+    return this.cartService.removeProductFromCart(user, productId);
   }
 }
