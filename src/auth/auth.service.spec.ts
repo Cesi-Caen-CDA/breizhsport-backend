@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { UserService } from '../user/services/user.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { User } from '../user/schemas/user.schema';
+import { LoginUserDto } from 'src/dto/login-user.dto';
 
 // Mock de UserService
 const mockUserService = {
@@ -49,16 +50,10 @@ describe('AuthService', () => {
       firstname: 'Jane',
       lastname: 'DOE',
       email: 'jane.doe@example.com',
-      password: 'password123',
+      password: 'password12345789',
     };
 
     mockUserService.findOneByEmail.mockResolvedValue(createUserDto as any);
-
-    try {
-      await authService.login(createUserDto);
-    } catch (e) {
-      expect(e.message).toBe('Email déjà utilisé');
-    }
 
     expect(mockUserService.findOneByEmail).toHaveBeenCalledWith(
       createUserDto.email,

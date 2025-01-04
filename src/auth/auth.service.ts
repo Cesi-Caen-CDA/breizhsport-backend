@@ -15,7 +15,7 @@ export class AuthService {
     authBody,
   }: {
     authBody: AuthType;
-  }): Promise<{ token: string }> {
+  }): Promise<{ token: string; message: string }> {
     const { email, password } = authBody;
 
     // Vérifiez si l'utilisateur existe
@@ -34,7 +34,7 @@ export class AuthService {
     const payload = { userId: user._id, email: user.email };
     const token = this.jwtService.sign(payload);
 
-    return { token };
+    return { token: token, message: 'Authentification réussie.' };
   }
 
   async logout(token: string): Promise<{ message: string }> {

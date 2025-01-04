@@ -11,7 +11,7 @@ services:
     volumes:
       - ./src:/usr/src/app/src # Synchronise les fichiers locaux avec le conteneur
       - ./node_modules:/usr/src/app/node_modules # Ignore les node_modules locaux
-    command: npm run start:dev # Lance le mode développement
+    command: npm run start
     depends_on:
       - mongo
     networks:

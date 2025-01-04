@@ -1,5 +1,5 @@
 # Utilise une image Node.js officielle
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Définit le répertoire de travail
 WORKDIR /usr/src/app
@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 3000
 
 # Commande pour démarrer l'application en mode développement
-CMD ["npm", "run", "start:dev"]
+CMD ["npm", "run", "start"]
