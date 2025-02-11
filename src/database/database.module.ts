@@ -1,6 +1,6 @@
 import { Module, OnModuleInit } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 
 @Module({
@@ -10,7 +10,8 @@ import mongoose from 'mongoose';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGO_URI'),
+        // eslint-disable-next-line prettier/prettier
+        uri: configService.get<string>('DATABASE_URL'),
       }),
     }),
   ],
