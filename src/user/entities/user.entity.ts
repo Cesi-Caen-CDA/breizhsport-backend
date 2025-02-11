@@ -1,7 +1,8 @@
 // src/user/entities/user.entity.ts
 import { UserType } from '../types/user.type';
+import { Document } from 'mongoose';
 
-export class UserEntity implements UserType {
+export class UserEntity extends Document implements UserType {
   _id: string;
   lastname: string;
   firstname: string;
@@ -9,6 +10,7 @@ export class UserEntity implements UserType {
   password: string;
 
   constructor(partial: Partial<UserType>) {
+    super();
     Object.assign(this, partial);
   }
 

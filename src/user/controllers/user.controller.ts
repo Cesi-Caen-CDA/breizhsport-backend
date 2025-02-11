@@ -8,12 +8,14 @@ import {
   Delete,
   UseGuards,
   Patch,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { AuthGuard } from '../../auth/guards/auth.guard';
-import { OwnProfileGuard } from 'src/auth/guards/own.profile.guard';
+import { OwnProfileGuard } from '../../auth/guards/own.profile.guard';
 
 @Controller('users')
 export class UserController {

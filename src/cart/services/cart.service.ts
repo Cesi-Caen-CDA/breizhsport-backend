@@ -3,9 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Cart } from '../schemas/cart.schema';
-import { CreateCartDto } from '../dto/create-cart.dto';
 import { ProductService } from '../../product/services/product.service';
-import { Product } from '../../product/schemas/product.schema';
 import { User } from '../../user/schemas/user.schema';
 
 @Injectable()
@@ -16,7 +14,7 @@ export class CartService {
   ) {}
 
   async addProductToCart(
-    user: User,
+    user: string | Types.ObjectId,
     productId: string,
     quantity: number,
   ): Promise<Cart> {
@@ -28,36 +26,52 @@ export class CartService {
     // Conversion explicite en ObjectId
     const productObjectId = new Types.ObjectId(product._id.toString());
 
+    // Trouver le panier existant
     let cart = await this.cartModel.findOne({
-      user: user._id,
+      user: user,
       checkedOut: false,
     });
 
-    if (cart) {
-      const existingProduct = cart.products.find(
-        (p) => p.product.toString() === productObjectId.toString(),
-      );
-      if (existingProduct) {
-        existingProduct.quantity += quantity;
-      } else {
-        cart.products.push({ product: productObjectId, quantity });
-      }
-      await cart.save();
-    } else {
-      cart = new this.cartModel({
-        user: user._id,
-        products: [{ product: productObjectId, quantity }],
-      });
-      await cart.save();
+    if (!cart) {
+      throw new Error('Panier non trouvé');
     }
 
+    // Si le tableau products est undefined, initialiser à un tableau vide
+    if (!Array.isArray(cart.products)) {
+      cart.products = [];
+    }
+
+    if (cart) {
+      // Vérifier si le produit existe déjà dans le panier
+      const existingProductIndex = cart.products.findIndex(
+        (p) => p.product.toString() === productObjectId.toString(),
+      );
+
+      if (existingProductIndex !== -1) {
+        // Si le produit existe déjà, mettez à jour sa quantité
+        cart.products[existingProductIndex].quantity = quantity; // Remplacez par la nouvelle quantité
+      } else {
+        // Ajouter le produit si non existant
+        cart.products.push({ product: productObjectId, quantity });
+      }
+    } else {
+      // Créez un nouveau panier si aucun n'existe
+      cart = new this.cartModel({
+        user: user,
+        products: [{ product: productObjectId, quantity }],
+      });
+    }
+
+    // Sauvegardez le panier
+    await cart.save();
     return cart;
   }
 
   // Vérifier le panier (pour passer à la commande)
-  async checkout(user: User): Promise<Cart> {
+  async checkout(userId: string | Types.ObjectId): Promise<Cart> {
+    const userObjectId = new Types.ObjectId(userId);
     const cart = await this.cartModel
-      .findOne({ user: user._id, checkedOut: false })
+      .findOne({ user: userObjectId, checkedOut: false })
       .populate('products.product'); // Peuple la référence "product" avec les détails du produit
 
     if (!cart) {
@@ -85,16 +99,24 @@ export class CartService {
     return cart;
   }
 
-  async removeProductFromCart(user: User, productId: string): Promise<Cart> {
+  async removeProductFromCart(
+    userId: string | Types.ObjectId,
+    productId: string,
+  ): Promise<Cart> {
     const productObjectId = new Types.ObjectId(productId);
 
     const cart = await this.cartModel.findOne({
-      user: user._id,
+      user: userId,
       checkedOut: false,
     });
 
     if (!cart) {
       throw new Error('Panier non trouvé');
+    }
+
+    // Si le tableau products est undefined, initialiser à un tableau vide
+    if (!Array.isArray(cart.products)) {
+      cart.products = [];
     }
 
     const productIndex = cart.products.findIndex(
@@ -103,11 +125,11 @@ export class CartService {
 
     if (productIndex === -1) {
       throw new Error('Produit non trouvé dans le panier');
+    } else {
+      cart.products.splice(productIndex, 1); // Supprime le produit du panier
+
+      await cart.save(); // Sauvegarde les modifications
+      return cart;
     }
-
-    cart.products.splice(productIndex, 1); // Supprime le produit du panier
-
-    await cart.save(); // Sauvegarde les modifications
-    return cart;
   }
 }

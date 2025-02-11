@@ -1,14 +1,16 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { UserService } from 'src/user/services/user.service';
+import { UserService } from '../user/services/user.service';
 import { AuthType } from './types/auth.type';
 
 @Injectable()
 export class AuthService {
+  private blacklistedTokens: Set<string> = new Set(); // Liste noire des tokens invalidés
+
   constructor(
-    private userService: UserService, // Service pour accéder aux utilisateurs
-    private jwtService: JwtService, // Service pour gérer les tokens JWT
+    private userService: UserService,
+    private jwtService: JwtService,
   ) {}
 
   async login({
@@ -18,28 +20,31 @@ export class AuthService {
   }): Promise<{ token: string; message: string }> {
     const { email, password } = authBody;
 
-    // Vérifiez si l'utilisateur existe
     const user = await this.userService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
-    // Vérifiez si le mot de passe est correct
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
-    // Générer un token JWT
     const payload = { userId: user._id, email: user.email };
     const token = this.jwtService.sign(payload);
 
-    return { token: token, message: 'Authentification réussie.' };
+    return { token, message: 'Authentification réussie.' };
   }
 
   async logout(token: string): Promise<{ message: string }> {
-    // Optionnel : Invalider le token côté serveur (par exemple, en l'ajoutant à une liste noire)
-    // Pour l'instant, nous retournons simplement une réponse de déconnexion réussie.
+    // Simuler l’invalidation du token en l’ajoutant à une liste noire
+    this.blacklistedTokens.add(token);
+
     return { message: 'Déconnexion réussie.' };
+  }
+
+  isTokenBlacklisted(token: string): boolean {
+    // Vérifie si le token est dans la liste noire
+    return this.blacklistedTokens.has(token);
   }
 }
