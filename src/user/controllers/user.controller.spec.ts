@@ -123,7 +123,12 @@ describe('UserController', () => {
 
   describe('update', () => {
     it('should update a user successfully', async () => {
-      const dto: UpdateUserDto = { password: 'newpassword' };
+      const dto: UpdateUserDto = {
+        password: 'newpassword',
+        lastname: 'Doe',
+        firstname: 'John',
+        email: 'john.doe@example.com',
+      };
       const result = await controller.update('1', dto);
 
       expect(result).toEqual({
@@ -162,7 +167,12 @@ describe('UserController', () => {
 
   describe('updateProfile', () => {
     it('should update the user profile if the user is authenticated', async () => {
-      const dto: UpdateUserDto = { password: 'newpassword' };
+      const dto: UpdateUserDto = {
+        password: 'newpassword',
+        lastname: 'Doe',
+        firstname: 'John',
+        email: 'john.doe@example.com',
+      };
       const result = await controller.updateProfile('1', dto);
 
       expect(result).toEqual({

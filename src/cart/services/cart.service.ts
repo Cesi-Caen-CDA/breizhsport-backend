@@ -5,64 +5,70 @@ import { Model, Types } from 'mongoose';
 import { Cart } from '../schemas/cart.schema';
 import { ProductService } from '../../product/services/product.service';
 import { User } from '../../user/schemas/user.schema';
+import { NotFoundException } from '@nestjs/common';
+import { UserService } from '../../user/services/user.service';
 
 @Injectable()
 export class CartService {
   constructor(
     @InjectModel(Cart.name) private cartModel: Model<Cart>,
     private productService: ProductService,
+    private userService: UserService,
   ) {}
 
   async addProductToCart(
-    user: string | Types.ObjectId,
+    userId: string,
     productId: string,
     quantity: number,
   ): Promise<Cart> {
+    // Recherche de l'utilisateur
+    const user = await this.userService.findOne(userId);
+
+    if (!user) {
+      throw new Error('Utilisateur introuvable');
+    }
+    // Conversion explicite en ObjectId
+    const userObjectId = new Types.ObjectId(user._id.toString());
+
+    // Recherche du produit
     const product = await this.productService.findOne(productId);
     if (!product || !product._id) {
-      throw new Error('Produit non trouvé ou ID du produit invalide');
+      throw new NotFoundException(
+        'Produit non trouvé ou ID du produit invalide',
+      );
     }
 
     // Conversion explicite en ObjectId
     const productObjectId = new Types.ObjectId(product._id.toString());
 
-    // Trouver le panier existant
+    // Trouver ou créer un panier
     let cart = await this.cartModel.findOne({
-      user: user,
+      user: userObjectId,
       checkedOut: false,
     });
 
     if (!cart) {
-      throw new Error('Panier non trouvé');
-    }
-
-    // Si le tableau products est undefined, initialiser à un tableau vide
-    if (!Array.isArray(cart.products)) {
-      cart.products = [];
-    }
-
-    if (cart) {
-      // Vérifier si le produit existe déjà dans le panier
+      // Si aucun panier existant, en créer un
+      cart = new this.cartModel({
+        user: userObjectId,
+        products: [{ product: productObjectId, quantity }],
+      });
+    } else {
+      // Si le panier existe, vérifier si le produit est déjà présent
       const existingProductIndex = cart.products.findIndex(
         (p) => p.product.toString() === productObjectId.toString(),
       );
 
       if (existingProductIndex !== -1) {
-        // Si le produit existe déjà, mettez à jour sa quantité
-        cart.products[existingProductIndex].quantity = quantity; // Remplacez par la nouvelle quantité
+        // Si le produit existe déjà dans le panier, on met à jour sa quantité
+        cart.products[existingProductIndex].quantity = quantity;
       } else {
-        // Ajouter le produit si non existant
+        // Sinon, on ajoute un nouveau produit
         cart.products.push({ product: productObjectId, quantity });
       }
-    } else {
-      // Créez un nouveau panier si aucun n'existe
-      cart = new this.cartModel({
-        user: user,
-        products: [{ product: productObjectId, quantity }],
-      });
     }
 
-    // Sauvegardez le panier
+    // Sauvegarde du panier
     await cart.save();
     return cart;
   }
@@ -90,12 +96,14 @@ export class CartService {
         checkedOut: false,
       })
       .populate({
-        path: 'products.product', // Peupler les informations du produit
-        select: 'name price category description stock', // Sélectionner les informations nécessaires
+        path: 'products.product',
+        select: 'name price category description stock',
       });
-    if (!cart) {
-      throw new Error('Panier non trouvé');
+    // Si le panier n'existe pas ou s'il est vide (produits = [])
+    if (!cart || !cart.products || cart.products.length === 0) {
+      throw new NotFoundException('Panier non trouvé');
     }
+
     return cart;
   }
 
@@ -104,32 +112,40 @@ export class CartService {
     productId: string,
   ): Promise<Cart> {
     const productObjectId = new Types.ObjectId(productId);
+    const idUser = userId.toString();
 
+    const user = await this.userService.findOne(idUser);
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+    // Recherche du panier de l'utilisateur
     const cart = await this.cartModel.findOne({
-      user: userId,
+      user: user._id,
       checkedOut: false,
     });
-
+    // Si le panier n'existe pas, on lance une exception
     if (!cart) {
-      throw new Error('Panier non trouvé');
+      throw new NotFoundException('Panier non trouvé');
     }
 
-    // Si le tableau products est undefined, initialiser à un tableau vide
+    // Si le tableau de produits est undefined, on l'initialise à un tableau vide
     if (!Array.isArray(cart.products)) {
       cart.products = [];
     }
 
+    // Recherche du produit à supprimer dans le panier
     const productIndex = cart.products.findIndex(
       (p) => p.product.toString() === productObjectId.toString(),
     );
 
+    // Si le produit n'est pas trouvé, on lance une exception
     if (productIndex === -1) {
-      throw new Error('Produit non trouvé dans le panier');
+      throw new NotFoundException('Produit non trouvé dans le panier');
     } else {
-      cart.products.splice(productIndex, 1); // Supprime le produit du panier
-
-      await cart.save(); // Sauvegarde les modifications
-      return cart;
+      // Si le produit est trouvé, on le supprime
+      cart.products.splice(productIndex, 1);
+      await cart.save(); // Sauvegarde les modifications dans la base de données
+      return cart; // Retourne le panier mis à jour
     }
   }
 }

@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '../schemas/user.schema';
@@ -14,51 +19,108 @@ export class UserService {
     private jwtService: JwtService, // Service pour gérer les tokens JWT
   ) {}
 
+  // Créer un utilisateur
   async create(userData: UserType): Promise<{ user: User; token: string }> {
     const { email, password, ...rest } = userData;
+
     // Vérifier si un utilisateur avec cet email existe déjà
     const existingUser = await this.findOneByEmail(email);
     if (existingUser) {
-      throw new Error('Un utilisateur avec cet email existe déjà.');
+      throw new BadRequestException(
+        'Un utilisateur avec cet email existe déjà.',
+      );
     }
 
-    // Hacher le mot de passe avant de sauvegarder
-    const saltRounds = 10; // Définir le nombre de rounds pour bcrypt
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    try {
+      // Hacher le mot de passe avant de sauvegarder
+      const saltRounds = 10; // Définir le nombre de rounds pour bcrypt
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Créer et sauvegarder le nouvel utilisateur avec le mot de passe haché
-    const user = new this.userModel({
-      ...rest,
-      email: email,
-      password: hashedPassword,
-    });
-    console.log(user);
-    const savedUser = await user.save();
+      // Créer et sauvegarder le nouvel utilisateur avec le mot de passe haché
+      const user = new this.userModel({
+        ...rest,
+        email: email,
+        password: hashedPassword,
+      });
 
-    // Générer un token JWT
-    const payload = { userId: savedUser._id, email: savedUser.email };
-    const token = this.jwtService.sign(payload);
+      const savedUser = await user.save();
 
-    // Retourner l'utilisateur et le token
-    return { user: savedUser, token };
+      // Générer un token JWT
+      const payload = { userId: savedUser._id, email: savedUser.email };
+      const token = this.jwtService.sign(payload);
+
+      // Retourner l'utilisateur et le token
+      return { user: savedUser, token };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        "Erreur lors de la création de l'utilisateur: " + error.message,
+      );
+    }
   }
 
+  // Récupérer tous les utilisateurs
   async findAll(): Promise<User[]> {
-    return this.userModel.find().exec();
+    try {
+      return await this.userModel.find().exec();
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Erreur lors de la récupération des utilisateurs: ' + error.message,
+      );
+    }
   }
 
+  // Récupérer un utilisateur par son ID
   async findOne(id: string): Promise<User> {
-    return this.userModel.findById(id).exec();
+    const user = await this.userModel.findById(id).exec();
+    if (!user) {
+      throw new NotFoundException(`Utilisateur avec l'ID ${id} non trouvé`);
+    }
+    return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    return this.userModel
-      .findByIdAndUpdate(id, updateUserDto, { new: true })
-      .exec();
+    try {
+      const { password, ...rest } = updateUserDto;
+
+      let updatedUserDto: any = { ...rest };
+
+      // Si un mot de passe est fourni, le hacher et l'ajouter à updatedUserDto
+      if (password) {
+        const saltRounds = 10; // Définir le nombre de rounds pour bcrypt
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        updatedUserDto.password = hashedPassword;
+      }
+
+      // Mettre à jour l'utilisateur avec les nouveaux champs
+      const updatedUser = await this.userModel
+        .findByIdAndUpdate(id, updatedUserDto, { new: true })
+        .exec();
+
+      // Si l'utilisateur n'existe pas, lever une exception NotFoundException
+      if (!updatedUser) {
+        throw new NotFoundException(`Utilisateur avec l'ID ${id} non trouvé`);
+      }
+
+      return updatedUser;
+    } catch (error) {
+      // Si l'erreur est une NotFoundException, elle doit déjà avoir été levée
+      if (error instanceof NotFoundException) {
+        throw error; // Laisser l'exception se propager sans la capturer
+      }
+
+      // Capturer les autres erreurs et lever une InternalServerErrorException
+      throw new InternalServerErrorException(
+        "Erreur lors de la mise à jour de l'utilisateur: " + error.message,
+      );
+    }
   }
 
+  // Supprimer un utilisateur
   async remove(id: string): Promise<void> {
-    await this.userModel.findByIdAndDelete(id).exec();
+    const result = await this.userModel.findByIdAndDelete(id).exec();
+    if (!result) {
+      throw new NotFoundException(`Utilisateur avec l'ID ${id} non trouvé`);
+    }
   }
 
   // Méthode pour compter les utilisateurs
@@ -66,7 +128,7 @@ export class UserService {
     try {
       return await this.userModel.countDocuments().exec(); // Compter tous les documents utilisateurs
     } catch (error) {
-      throw new Error(
+      throw new InternalServerErrorException(
         'Erreur lors du comptage des utilisateurs: ' + error.message,
       );
     }

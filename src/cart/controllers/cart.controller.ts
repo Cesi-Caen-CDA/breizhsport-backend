@@ -28,12 +28,6 @@ export class CartController {
     @Body('userId') userId: string,
     @Body('quantity') quantity: number,
   ) {
-    const user = await this.userService.findOne(userId);
-
-    if (!user) {
-      throw new Error('Utilisateur introuvable');
-    }
-
     return this.cartService.addProductToCart(userId, productId, quantity);
   }
 
@@ -47,10 +41,6 @@ export class CartController {
     @Param('productId') productId: string,
     @Body('userId') userId: string,
   ) {
-    const user = await this.userService.findOne(userId);
-    if (!user) {
-      throw new Error('Utilisateur introuvable');
-    }
     return this.cartService.removeProductFromCart(userId, productId);
   }
 }

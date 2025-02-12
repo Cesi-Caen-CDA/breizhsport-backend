@@ -4,13 +4,13 @@ import {
   IsNumber,
   IsOptional,
   Min,
-  Max,
+  MinLength,
   IsPositive,
 } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
-  @Min(3, { message: 'Le nom doit comporter au moins 3 caractères.' })
+  @MinLength(3, { message: 'Le nom doit comporter au moins 3 caractères.' })
   name: string;
 
   @IsNumber()
@@ -18,7 +18,9 @@ export class CreateProductDto {
   price: number;
 
   @IsString()
-  @Min(3, { message: 'La catégorie doit comporter au moins 3 caractères.' })
+  @MinLength(3, {
+    message: 'La catégorie doit comporter au moins 3 caractères.',
+  })
   category: string;
 
   @IsOptional()

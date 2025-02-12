@@ -6,7 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Cart, CartSchema } from './schemas/cart.schema';
 import { ProductModule } from '../product/product.module';
 import { UserModule } from '../user/user.module';
-import { AuthModule } from 'src/auth/auth.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
