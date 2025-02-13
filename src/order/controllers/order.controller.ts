@@ -18,10 +18,7 @@ export class OrderController {
   }
 
   @Patch(':id')
-  async updateOrder(
-    @Param('id') id: string,
-    @Body() updateOrderDto: UpdateOrderDto,
-  ) {
-    return this.orderService.updateOrder(id, updateOrderDto);
+  async updateOrder(@Param('id') id: string) {
+    return this.orderService.updateOrder(id);
   }
 }

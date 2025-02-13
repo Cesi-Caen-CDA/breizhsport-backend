@@ -1,6 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { Order } from '../schemas/order.schema';
 import { CartService } from '../../cart/services/cart.service';
 import { Product } from '../../product/schemas/product.schema';
@@ -21,17 +25,21 @@ export class OrderService {
     // Vérifier le panier
     const cart = await this.cartService.getCartForUser(userId);
     if (!cart || cart.products.length === 0) {
-      throw new Error('Le panier est vide ou invalide.');
+      throw new NotFoundException('Le panier est vide ou invalide.');
     }
 
     // Vérification du stock
     for (const item of products) {
       const product = await this.productModel.findById(item.productId);
       if (!product) {
-        throw new Error(`Produit avec ID ${item.productId} non trouvé.`);
+        throw new NotFoundException(
+          `Produit avec ID ${item.productId} non trouvé.`,
+        );
       }
       if (product.stock < item.quantity) {
-        throw new Error(`Stock insuffisant pour le produit ${product.name}.`);
+        throw new NotFoundException(
+          `Stock insuffisant pour le produit ${product.name}.`,
+        );
       }
     }
 
@@ -66,12 +74,14 @@ export class OrderService {
   }
 
   async getOrderHistory(userId: string): Promise<Order[]> {
+    const userObjectId = new Types.ObjectId(userId);
+
     const orderHistory = await this.orderModel
-      .find({ user: userId })
+      .find({ user: userObjectId.toString(), status: 'completed' })
       .populate('products.product', 'name price category description stock');
 
     if (!orderHistory || orderHistory.length === 0) {
-      throw new Error(
+      throw new NotFoundException(
         'Aucun historique de commandes trouvé pour cet utilisateur.',
       );
     }
@@ -79,20 +89,17 @@ export class OrderService {
     return orderHistory;
   }
 
-  async updateOrder(
-    id: string,
-    updateOrderDto: UpdateOrderDto,
-  ): Promise<Order> {
+  async updateOrder(id: string): Promise<Order> {
     const updatedOrder = await this.orderModel.findByIdAndUpdate(
       id,
-      updateOrderDto,
       {
-        new: true,
+        status: 'completed',
       },
+      { new: true },
     );
 
     if (!updatedOrder) {
-      throw new Error(`Commande avec l'ID ${id} non trouvée.`);
+      throw new NotFoundException(`Commande avec l'ID ${id} non trouvée.`);
     }
 
     return updatedOrder;
