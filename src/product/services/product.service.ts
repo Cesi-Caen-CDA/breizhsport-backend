@@ -11,8 +11,8 @@ export class ProductService {
     @InjectModel(Product.name) private readonly productModel: Model<Product>,
   ) {}
   async create(createUserDto: CreateProductDto): Promise<Product> {
-    const user = new this.productModel(createUserDto);
-    return user.save();
+    const product = new this.productModel(createUserDto);
+    return product.save();
   }
 
   async findAll(): Promise<Product[]> {
