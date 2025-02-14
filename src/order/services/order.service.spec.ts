@@ -4,6 +4,7 @@ import { CartService } from '../../cart/services/cart.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Product } from '../../product/schemas/product.schema';
 import { Order } from '../schemas/order.schema';
+import { NotFoundException } from '@nestjs/common';
 
 describe('OrderService', () => {
   let orderService: OrderService;
@@ -123,35 +124,36 @@ describe('OrderService', () => {
   describe('getOrderHistory', () => {
     it('devrait retourner l’historique des commandes', async () => {
       const userId = 'user-id';
+      const status = 'completed';
+      const result = await orderService.getOrderHistory(userId );
 
-      const result = await orderService.getOrderHistory(userId);
-
-      expect(orderModel.find).toHaveBeenCalledWith({ user: userId });
+      expect(orderModel.find).toHaveBeenCalledWith({ user: userId, status: status});
       expect(result).toEqual([mockOrder]);
     });
-
-    it('devrait lancer une erreur si l’historique des commandes est vide', async () => {
-      mockOrderModel.find.mockReturnValueOnce({
-        populate: jest.fn().mockResolvedValue([]), // Simule un résultat vide après populate
+    
+      it('devrait lancer une erreur si l’historique des commandes est vide', async () => {
+        mockOrderModel.find.mockReturnValueOnce({
+          populate: jest.fn().mockResolvedValue([]),
+        });
+    
+        const userId = 'user-id';
+    
+        try {
+          await orderService.getOrderHistory(userId);
+          fail('Should have thrown NotFoundException');
+        } catch (error) {
+          expect(error).toBeInstanceOf(NotFoundException); // Vérifie le type de l'erreur
+        }
       });
-
-      const userId = 'user-id';
-
-      await expect(orderService.getOrderHistory(userId)).rejects.toThrow(
-        'Aucun historique de commandes trouvé pour cet utilisateur.',
-      );
-    });
   });
 
   describe('updateOrder', () => {
     it('devrait mettre à jour une commande', async () => {
-      const updateOrderDto = { status: 'completed' };
 
-      const result = await orderService.updateOrder('order-id', updateOrderDto);
+      const result = await orderService.updateOrder('order-id');
 
       expect(orderModel.findByIdAndUpdate).toHaveBeenCalledWith(
         'order-id',
-        updateOrderDto,
         { new: true },
       );
       expect(result).toEqual(mockOrder);
@@ -160,10 +162,8 @@ describe('OrderService', () => {
     it('devrait lancer une erreur si la commande n’est pas trouvée', async () => {
       mockOrderModel.findByIdAndUpdate.mockResolvedValueOnce(null);
 
-      const updateOrderDto = { status: 'completed' };
-
       await expect(
-        orderService.updateOrder('invalid-id', updateOrderDto),
+        orderService.updateOrder('invalid-id'),
       ).rejects.toThrow("Commande avec l'ID invalid-id non trouvée.");
     });
   });

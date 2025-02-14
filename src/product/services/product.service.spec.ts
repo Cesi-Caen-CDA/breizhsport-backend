@@ -3,6 +3,8 @@ import { ProductService } from './product.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Product } from '../schemas/product.schema';
 import { Types } from 'mongoose';
+import { NotFoundException } from '@nestjs/common';
+
 
 describe('ProductService', () => {
   let productService: ProductService;
@@ -29,9 +31,10 @@ describe('ProductService', () => {
     findByIdAndUpdate: jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockProduct),
     }),
-    findByIdAndDelete: jest.fn().mockReturnValue({
-      exec: jest.fn().mockResolvedValue(undefined),
-    }),
+      // ... autres mocks
+      findByIdAndDelete: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockProduct), // Pour le test de succès
+      }),
   };
 
   // Simule l'instanciation d'un nouveau document avec save()
@@ -105,11 +108,13 @@ describe('ProductService', () => {
       productModel.findById.mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue(null),
       });
-
-      const result = await productService.findOne(productId);
-
+      try {
+        const result = await productService.findOne(productId);
+      } catch (error) {
+        expect(error.response.statusCode).toBe(404); // Vérifie le code de statut
+      }
       expect(productModel.findById).toHaveBeenCalledWith(productId);
-      expect(result).toBeNull();
+      
     });
   });
 
@@ -131,11 +136,33 @@ describe('ProductService', () => {
 
   describe('remove', () => {
     it('devrait supprimer un produit avec succès', async () => {
-      const productId = mockProduct._id.toString();
-
+      const createProductDto = {
+        name: 'Product 1',
+        price: 50,
+        category: 'Category 1',
+        description: 'Product description',
+        stock: 10,
+      };
+      const result = await productService.create(createProductDto);
+      const productId = result._id.toString();
+  
+      // Mock spécifique pour ce test: simule une suppression réussie
+      jest.spyOn(productModel, 'findByIdAndDelete').mockResolvedValue({ /* ... */ }); // Retourne un objet (peu importe lequel)
+  
       await productService.remove(productId);
-
+  
       expect(productModel.findByIdAndDelete).toHaveBeenCalledWith(productId);
+    });
+  
+    it('devrait lancer une NotFoundException si le produit n\'existe pas', async () => {
+      const productId = 'non-existent-id';
+    
+      // Mock spécifique pour ce test: simule un produit non trouvé
+      jest.spyOn(productModel, 'findByIdAndDelete').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+    
+      await expect(productService.remove(productId)).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -4,10 +4,12 @@ import { ProductService } from '../../product/services/product.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Cart } from '../schemas/cart.schema';
 import { Types } from 'mongoose';
+import { UserService } from '../../user/services/user.service';
 
 describe('CartService', () => {
   let cartService: CartService;
   let productService: ProductService;
+  let userService: UserService;
   let cartModel: any;
 
   const mockCart = {
@@ -54,6 +56,7 @@ describe('CartService', () => {
 
     cartService = module.get<CartService>(CartService);
     productService = module.get<ProductService>(ProductService);
+    userService = module.get<UserService>(UserService);
     cartModel = module.get(getModelToken(Cart.name));
   });
 
@@ -64,7 +67,7 @@ describe('CartService', () => {
       const quantity = 2;
 
       const result = await cartService.addProductToCart(
-        user._id,
+        user._id.toString(),
         productId,
         quantity,
       );
@@ -85,7 +88,7 @@ describe('CartService', () => {
       const quantity = 2;
 
       await expect(
-        cartService.addProductToCart(user._id, productId, quantity),
+        cartService.addProductToCart(user._id.toString(), productId, quantity),
       ).rejects.toThrow('Produit non trouvé ou ID du produit invalide');
     });
   });

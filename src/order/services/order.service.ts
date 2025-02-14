@@ -74,10 +74,9 @@ export class OrderService {
   }
 
   async getOrderHistory(userId: string): Promise<Order[]> {
-    const userObjectId = new Types.ObjectId(userId);
 
     const orderHistory = await this.orderModel
-      .find({ user: userObjectId.toString(), status: 'completed' })
+      .find({ user: userId, status: 'completed' })
       .populate('products.product', 'name price category description stock');
 
     if (!orderHistory || orderHistory.length === 0) {

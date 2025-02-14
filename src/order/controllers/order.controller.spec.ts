@@ -66,15 +66,14 @@ describe('OrderController', () => {
   describe('updateOrder', () => {
     it('should call OrderService.updateOrder with id and UpdateOrderDto and return the result', async () => {
       const orderId = 'order123';
-      const updateOrderDto: UpdateOrderDto = { status: 'completed' };
-      const mockUpdatedOrder = { id: orderId, status: 'completed' };
+      const mockUpdatedOrder = { id: orderId};
       jest
         .spyOn(service, 'updateOrder')
         .mockResolvedValue(mockUpdatedOrder as any);
 
-      const result = await controller.updateOrder(orderId, updateOrderDto);
+      const result = await controller.updateOrder(orderId);
 
-      expect(service.updateOrder).toHaveBeenCalledWith(orderId, updateOrderDto);
+      expect(service.updateOrder).toHaveBeenCalledWith(orderId);
       expect(result).toEqual(mockUpdatedOrder);
     });
   });
