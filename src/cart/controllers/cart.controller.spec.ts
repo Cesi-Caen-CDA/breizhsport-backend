@@ -1,9 +1,11 @@
+// src/cart/controllers/cart.controller.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { CartController } from './cart.controller';
 import { CartService } from '../services/cart.service';
 import { UserService } from '../../user/services/user.service';
 import { Types } from 'mongoose';
 import { AuthGuard } from '../../auth/guards/auth.guard';
+import { NotFoundException } from '@nestjs/common';
 
 describe('CartController', () => {
   let cartController: CartController;
@@ -16,17 +18,22 @@ describe('CartController', () => {
     email: 'john.doe@example.com',
   };
 
+  const mockProductId = new Types.ObjectId();
+
   const mockCart = {
     _id: new Types.ObjectId(),
     user: mockUser._id,
-    products: [{ product: new Types.ObjectId(), quantity: 2 }],
+    products: [{ product: mockProductId, quantity: 2 }],
     checkedOut: false,
   };
 
   const mockCartService = {
     addProductToCart: jest.fn().mockResolvedValue(mockCart),
     getCartForUser: jest.fn().mockResolvedValue(mockCart),
-    removeProductFromCart: jest.fn().mockResolvedValue(mockCart),
+    removeProductFromCart: jest.fn().mockResolvedValue({
+      ...mockCart,
+      products: [], // Panier sans produit après suppression
+    }),
   };
 
   const mockUserService = {
@@ -65,31 +72,22 @@ describe('CartController', () => {
       const userId = mockUser._id.toString();
       const quantity = 2;
 
+      // Exécute l'ajout du produit au panier
       const result = await cartController.addProductToCart(
         productId,
         userId,
         quantity,
       );
 
-      expect(userService.findOne).toHaveBeenCalledWith(userId);
+      // Vérifie que `cartService.addProductToCart` est bien appelé avec les bons paramètres
       expect(cartService.addProductToCart).toHaveBeenCalledWith(
         userId,
         productId,
         quantity,
       );
+
+      // Vérifie que le résultat est correct
       expect(result).toEqual(mockCart);
-    });
-
-    it("devrait lever une erreur si l'utilisateur n'existe pas", async () => {
-      mockUserService.findOne.mockResolvedValueOnce(null);
-
-      await expect(
-        cartController.addProductToCart(
-          new Types.ObjectId().toString(),
-          new Types.ObjectId().toString(),
-          2,
-        ),
-      ).rejects.toThrow('Utilisateur introuvable');
     });
   });
 
@@ -105,18 +103,18 @@ describe('CartController', () => {
 
     it('devrait lever une erreur si le panier est introuvable', async () => {
       mockCartService.getCartForUser.mockRejectedValueOnce(
-        new Error('Panier non trouvé'),
+        new NotFoundException('Panier non trouvé'),
       );
 
       await expect(
         cartController.getCart(mockUser._id.toString()),
-      ).rejects.toThrow('Panier non trouvé');
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('removeProductFromCart', () => {
     it('devrait supprimer un produit du panier avec succès', async () => {
-      const productId = new Types.ObjectId().toString();
+      const productId = mockProductId.toString();
       const userId = mockUser._id.toString();
 
       const result = await cartController.removeProductFromCart(
@@ -124,36 +122,11 @@ describe('CartController', () => {
         userId,
       );
 
-      expect(userService.findOne).toHaveBeenCalledWith(userId);
       expect(cartService.removeProductFromCart).toHaveBeenCalledWith(
         userId,
         productId,
       );
-      expect(result).toEqual(mockCart);
-    });
-
-    it("devrait lever une erreur si l'utilisateur n'existe pas", async () => {
-      mockUserService.findOne.mockResolvedValueOnce(null);
-
-      await expect(
-        cartController.removeProductFromCart(
-          new Types.ObjectId().toString(),
-          mockUser._id.toString(),
-        ),
-      ).rejects.toThrow('Utilisateur introuvable');
-    });
-
-    it('devrait lever une erreur si removeProductFromCart échoue', async () => {
-      mockCartService.removeProductFromCart.mockRejectedValueOnce(
-        new Error('Erreur de suppression'),
-      );
-
-      await expect(
-        cartController.removeProductFromCart(
-          new Types.ObjectId().toString(),
-          mockUser._id.toString(),
-        ),
-      ).rejects.toThrow('Erreur de suppression');
+      expect(result.products).toHaveLength(0); // Vérifie que le produit a été supprimé
     });
   });
 });

@@ -3,6 +3,7 @@ import { UserService } from './user.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { User } from '../schemas/user.schema';
 import { JwtService } from '@nestjs/jwt';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Types, Model } from 'mongoose';
 import { UserType } from '../types/user.type';
@@ -56,68 +57,39 @@ describe('UserService', () => {
     model = module.get<Model<User>>(getModelToken(User.name));
   });
 
-  // describe('create', () => {
-  //   it('devrait créer un utilisateur avec succès et générer un token', async () => {
-  //     const createUserDto: UserType = {
-  //       email: 'test@example.com',
-  //       password: 'password123',
-  //       firstname: 'John',
-  //       lastname: 'Doe',
-  //     };
+  describe('findOne', () => {
+    it("devrait retourner un utilisateur si l'ID est valide", async () => {
+      const mockId = new Types.ObjectId().toString();
+      const mockUserDocument = {
+        _id: mockId,
+        email: 'test@example.com',
+        password: 'hashedPassword',
+        firstname: 'John',
+        lastname: 'Doe',
+      };
 
-  //     userService.findOneByEmail = jest.fn().mockResolvedValue(null);
+      model.findById = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockUserDocument),
+      } as any);
 
-  //     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-  //     const newUser = {
-  //       email: createUserDto.email,
-  //       password: hashedPassword,
-  //       firstname: createUserDto.firstname,
-  //       lastname: createUserDto.lastname,
-  //     };
-  //     const result = await userService.create(newUser);
+      const result = await userService.findOne(mockId);
 
-  //     expect(userService.findOneByEmail).toHaveBeenCalledWith(
-  //       createUserDto.email,
-  //     );
+      expect(model.findById).toHaveBeenCalledWith(mockId);
+      expect(result).toEqual(mockUserDocument);
+    });
 
-  //     expect(model.constructor).toHaveBeenCalledWith({
-  //       ...createUserDto,
-  //       password: hashedPassword,
-  //     });
+    it("devrait lancer une NotFoundException si l'utilisateur n'est pas trouvé", async () => {
+      const mockId = new Types.ObjectId().toString();
 
-  //     expect(jwtService.sign).toHaveBeenCalledWith({
-  //       userId: result.user._id,
-  //       email: createUserDto.email,
-  //     });
+      model.findById = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
 
-  //     expect(result).toEqual({
-  //       user: {
-  //         ...createUserDto,
-  //         password: hashedPassword,
-  //         _id: result.user._id,
-  //       },
-  //       token: 'mocked-jwt-token',
-  //     });
-  //   });
+      await expect(userService.findOne(mockId)).rejects.toThrowError(
+        new NotFoundException(`Utilisateur avec l'ID ${mockId} non trouvé`),
+      );
 
-  //   it("devrait lancer une erreur si l'utilisateur existe déjà", async () => {
-  //     const createUserDto: UserType = { ...mockUser }; // Type UserType
-
-  //     const existingUser = {
-  //       ...mockUser,
-  //       _id: new Types.ObjectId().toString(),
-  //     }; // _id en string
-  //     userService.findOneByEmail = jest.fn().mockResolvedValue(existingUser);
-
-  //     await expect(userService.create(createUserDto)).rejects.toThrowError(
-  //       new Error('Un utilisateur avec cet email existe déjà.'),
-  //     );
-
-  //     expect(userService.findOneByEmail).toHaveBeenCalledWith(
-  //       createUserDto.email,
-  //     );
-  //   });
-  // });
-
-  // ... (autres tests)
+      expect(model.findById).toHaveBeenCalledWith(mockId);
+    });
+  });
 });

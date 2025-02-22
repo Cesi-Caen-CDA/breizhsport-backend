@@ -147,7 +147,7 @@ describe('CartController (e2e)', () => {
     });
 
     it("devrait retourner une erreur 404 si le panier n'existe pas pour un utilisateur", async () => {
-      let idUser = new Types.ObjectId(userId);
+      const idUser = new Types.ObjectId(userId);
       // Supprimer le panier pour que l'utilisateur n'ait pas de panier
       test = await cartModel.findOne({ user: idUser });
       // Supprimer le panier existant de l'utilisateur s'il existe

@@ -22,7 +22,7 @@ export class ProductService {
       // Sauvegarde du produit dans la base de données
       return await product.save();
     } catch (error) {
-
+      console.log(error);
       throw new InternalServerErrorException(
         'Erreur interne lors de la création du produit. Veuillez réessayer plus tard.',
       );
@@ -33,6 +33,7 @@ export class ProductService {
     try {
       return await this.productModel.find().exec();
     } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException('Failed to retrieve products');
     }
   }

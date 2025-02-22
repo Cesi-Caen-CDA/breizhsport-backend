@@ -28,7 +28,16 @@ export class CartController {
     @Body('userId') userId: string,
     @Body('quantity') quantity: number,
   ) {
-    return this.cartService.addProductToCart(userId, productId, quantity);
+    try {
+      return await this.cartService.addProductToCart(
+        userId,
+        productId,
+        quantity,
+      );
+    } catch (error) {
+      console.log('Voici les erreurs : ', error);
+      throw error;
+    }
   }
 
   @Get(':userId')

@@ -5,7 +5,6 @@ import { Product } from '../schemas/product.schema';
 import { Types } from 'mongoose';
 import { NotFoundException } from '@nestjs/common';
 
-
 describe('ProductService', () => {
   let productService: ProductService;
   let productModel: any;
@@ -31,10 +30,10 @@ describe('ProductService', () => {
     findByIdAndUpdate: jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockProduct),
     }),
-      // ... autres mocks
-      findByIdAndDelete: jest.fn().mockReturnValue({
-        exec: jest.fn().mockResolvedValue(mockProduct), // Pour le test de succès
-      }),
+    // ... autres mocks
+    findByIdAndDelete: jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProduct), // Pour le test de succès
+    }),
   };
 
   // Simule l'instanciation d'un nouveau document avec save()
@@ -114,7 +113,6 @@ describe('ProductService', () => {
         expect(error.response.statusCode).toBe(404); // Vérifie le code de statut
       }
       expect(productModel.findById).toHaveBeenCalledWith(productId);
-      
     });
   });
 
@@ -145,24 +143,22 @@ describe('ProductService', () => {
       };
       const result = await productService.create(createProductDto);
       const productId = result._id.toString();
-  
       // Mock spécifique pour ce test: simule une suppression réussie
-      jest.spyOn(productModel, 'findByIdAndDelete').mockResolvedValue({ /* ... */ }); // Retourne un objet (peu importe lequel)
-  
+      jest.spyOn(productModel, 'findByIdAndDelete').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockProduct), // Simule un produit trouvé et supprimé
+      });
       await productService.remove(productId);
-  
       expect(productModel.findByIdAndDelete).toHaveBeenCalledWith(productId);
     });
-  
-    it('devrait lancer une NotFoundException si le produit n\'existe pas', async () => {
+    it("devrait lancer une NotFoundException si le produit n'existe pas", async () => {
       const productId = 'non-existent-id';
-    
       // Mock spécifique pour ce test: simule un produit non trouvé
       jest.spyOn(productModel, 'findByIdAndDelete').mockReturnValue({
         exec: jest.fn().mockResolvedValue(null),
       });
-    
-      await expect(productService.remove(productId)).rejects.toThrow(NotFoundException);
+      await expect(productService.remove(productId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

@@ -25,7 +25,7 @@ export class CartService {
     const user = await this.userService.findOne(userId);
 
     if (!user) {
-      throw new Error('Utilisateur introuvable');
+      throw new NotFoundException('Utilisateur introuvable');
     }
     // Conversion explicite en ObjectId
     const userObjectId = new Types.ObjectId(user._id.toString());

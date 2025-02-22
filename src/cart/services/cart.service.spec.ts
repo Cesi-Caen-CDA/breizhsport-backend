@@ -1,3 +1,4 @@
+// src/cart/services/cart.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { CartService } from './cart.service';
 import { ProductService } from '../../product/services/product.service';
@@ -5,6 +6,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Cart } from '../schemas/cart.schema';
 import { Types } from 'mongoose';
 import { UserService } from '../../user/services/user.service';
+import { NotFoundException } from '@nestjs/common';
 
 describe('CartService', () => {
   let cartService: CartService;
@@ -12,9 +14,10 @@ describe('CartService', () => {
   let userService: UserService;
   let cartModel: any;
 
+  const mockUserId = new Types.ObjectId().toString(); // 👈 ID utilisateur constant
   const mockCart = {
     _id: new Types.ObjectId(),
-    user: new Types.ObjectId(),
+    user: new Types.ObjectId(mockUserId), // 👈 Utilisation d'un ObjectId
     products: [
       {
         product: new Types.ObjectId(),
@@ -37,12 +40,17 @@ describe('CartService', () => {
   const mockCartModel = {
     findOne: jest.fn().mockResolvedValue(mockCart),
     create: jest.fn().mockResolvedValue(mockCart),
-    // Ajout d'un mock de save
     save: jest.fn().mockResolvedValue(mockCart),
   };
 
   const mockProductService = {
     findOne: jest.fn().mockResolvedValue(mockProduct),
+  };
+
+  const mockUserService = {
+    findOne: jest
+      .fn()
+      .mockResolvedValue({ _id: new Types.ObjectId(mockUserId) }), // 👈 ID constant
   };
 
   beforeEach(async () => {
@@ -51,6 +59,7 @@ describe('CartService', () => {
         CartService,
         { provide: ProductService, useValue: mockProductService },
         { provide: getModelToken(Cart.name), useValue: mockCartModel },
+        { provide: UserService, useValue: mockUserService },
       ],
     }).compile();
 
@@ -62,7 +71,7 @@ describe('CartService', () => {
 
   describe('addProductToCart', () => {
     it('devrait ajouter un produit au panier avec succès', async () => {
-      const user = { _id: new Types.ObjectId() };
+      const user = { _id: new Types.ObjectId(mockUserId) }; // 👈 Utilisation de l'ID fixe
       const productId = mockProduct._id.toString();
       const quantity = 2;
 
@@ -74,16 +83,16 @@ describe('CartService', () => {
 
       expect(mockProductService.findOne).toHaveBeenCalledWith(productId);
       expect(mockCartModel.findOne).toHaveBeenCalledWith({
-        user: user._id,
+        user: user._id, // 👈 ID sous forme d'ObjectId
         checkedOut: false,
       });
-      expect(mockCart.save).toHaveBeenCalled(); // On vérifie que save est bien appelé
+      expect(mockCart.save).toHaveBeenCalled();
       expect(result).toEqual(mockCart);
     });
 
     it('devrait lancer une erreur si le produit est introuvable', async () => {
       mockProductService.findOne.mockResolvedValueOnce(null);
-      const user = { _id: new Types.ObjectId() };
+      const user = { _id: new Types.ObjectId(mockUserId) };
       const productId = new Types.ObjectId().toString();
       const quantity = 2;
 
@@ -95,52 +104,48 @@ describe('CartService', () => {
 
   describe('removeProductFromCart', () => {
     it('devrait supprimer un produit du panier', async () => {
-      const user = { _id: mockCart.user };
+      const user = { _id: new Types.ObjectId(mockUserId) };
+      const productId = mockCart.products[0].product.toString();
 
-      // On s'assure que mockCart contient bien un produit
-      const productId = mockCart.products[0].product.toString(); // On utilise l'ID du produit existant dans mockCart
-
-      // Assurons-nous que mockCart contient le produit avant l'appel de la méthode
-      mockCart.products = [
-        { product: new Types.ObjectId(productId), quantity: 1 }, // Le produit à supprimer
-      ];
+      mockCartModel.findOne.mockResolvedValueOnce(mockCart); // 👈 Assurer la cohérence
 
       const result = await cartService.removeProductFromCart(
-        user._id,
+        user._id.toString(),
         productId,
       );
 
+      expect(mockCartModel.findOne).toHaveBeenCalledTimes(2); // 👈 Vérifie qu'il est bien appelé 2 fois
       expect(mockCartModel.findOne).toHaveBeenCalledWith({
         user: user._id,
         checkedOut: false,
       });
-      expect(mockCart.save).toHaveBeenCalled(); // Vérifie que save a bien été appelé
+
+      expect(mockCart.save).toHaveBeenCalled();
       expect(result).toEqual(mockCart);
     });
 
     it('devrait lancer une erreur si le panier est introuvable', async () => {
       mockCartModel.findOne.mockResolvedValueOnce(null);
 
-      const user = { _id: new Types.ObjectId() };
+      const user = { _id: new Types.ObjectId(mockUserId) };
       const productId = new Types.ObjectId().toString();
 
       await expect(
-        cartService.removeProductFromCart(user._id, productId),
+        cartService.removeProductFromCart(user._id.toString(), productId),
       ).rejects.toThrow('Panier non trouvé');
     });
 
     it('devrait lancer une erreur si le produit n’est pas dans le panier', async () => {
-      // On simule un panier où le tableau de produits est vide
       mockCartModel.findOne.mockResolvedValueOnce({
         ...mockCart,
-        products: [], // Panier vide
+        products: [], // 👈 Panier vide
       });
 
-      const user = { _id: mockCart.user };
-      const productId = new Types.ObjectId().toString(); // Utilisation d'un ID qui n'existe pas dans le panier
+      const user = { _id: new Types.ObjectId(mockUserId) };
+      const productId = new Types.ObjectId().toString();
 
       await expect(
-        cartService.removeProductFromCart(user._id, productId),
+        cartService.removeProductFromCart(user._id.toString(), productId),
       ).rejects.toThrow('Produit non trouvé dans le panier');
     });
   });

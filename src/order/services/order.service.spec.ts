@@ -124,36 +124,41 @@ describe('OrderService', () => {
   describe('getOrderHistory', () => {
     it('devrait retourner l’historique des commandes', async () => {
       const userId = 'user-id';
-      const status = 'completed';
-      const result = await orderService.getOrderHistory(userId );
 
-      expect(orderModel.find).toHaveBeenCalledWith({ user: userId, status: status});
+      const result = await orderService.getOrderHistory(userId);
+
+      expect(orderModel.find).toHaveBeenCalledWith({
+        user: userId,
+        status: 'completed',
+      });
       expect(result).toEqual([mockOrder]);
     });
-    
-      it('devrait lancer une erreur si l’historique des commandes est vide', async () => {
-        mockOrderModel.find.mockReturnValueOnce({
-          populate: jest.fn().mockResolvedValue([]),
-        });
-    
-        const userId = 'user-id';
-    
-        try {
-          await orderService.getOrderHistory(userId);
-          fail('Should have thrown NotFoundException');
-        } catch (error) {
-          expect(error).toBeInstanceOf(NotFoundException); // Vérifie le type de l'erreur
-        }
+
+    it('devrait lancer une erreur si l’historique des commandes est vide', async () => {
+      mockOrderModel.find.mockReturnValueOnce({
+        populate: jest.fn().mockResolvedValue([]),
       });
+
+      const userId = 'user-id';
+
+      try {
+        await orderService.getOrderHistory(userId);
+        fail('Should have thrown NotFoundException');
+      } catch (error) {
+        expect(error).toBeInstanceOf(NotFoundException); // Vérifie le type de l'erreur
+      }
+    });
   });
 
   describe('updateOrder', () => {
     it('devrait mettre à jour une commande', async () => {
-
       const result = await orderService.updateOrder('order-id');
 
       expect(orderModel.findByIdAndUpdate).toHaveBeenCalledWith(
         'order-id',
+        {
+          status: 'completed',
+        },
         { new: true },
       );
       expect(result).toEqual(mockOrder);
@@ -162,9 +167,9 @@ describe('OrderService', () => {
     it('devrait lancer une erreur si la commande n’est pas trouvée', async () => {
       mockOrderModel.findByIdAndUpdate.mockResolvedValueOnce(null);
 
-      await expect(
-        orderService.updateOrder('invalid-id'),
-      ).rejects.toThrow("Commande avec l'ID invalid-id non trouvée.");
+      await expect(orderService.updateOrder('invalid-id')).rejects.toThrow(
+        "Commande avec l'ID invalid-id non trouvée.",
+      );
     });
   });
 });

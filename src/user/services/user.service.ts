@@ -31,31 +31,25 @@ export class UserService {
       );
     }
 
-    try {
-      // Hacher le mot de passe avant de sauvegarder
-      const saltRounds = 10; // Définir le nombre de rounds pour bcrypt
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
+    // Hacher le mot de passe avant de sauvegarder
+    const saltRounds = 10; // Définir le nombre de rounds pour bcrypt
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Créer et sauvegarder le nouvel utilisateur avec le mot de passe haché
-      const user = new this.userModel({
-        ...rest,
-        email: email,
-        password: hashedPassword,
-      });
+    // Créer et sauvegarder le nouvel utilisateur avec le mot de passe haché
+    const user = new this.userModel({
+      ...rest,
+      email: email,
+      password: hashedPassword,
+    });
 
-      const savedUser = await user.save();
+    const savedUser = await user.save();
 
-      // Générer un token JWT
-      const payload = { userId: savedUser._id, email: savedUser.email };
-      const token = this.jwtService.sign(payload);
+    // Générer un token JWT
+    const payload = { userId: savedUser._id, email: savedUser.email };
+    const token = this.jwtService.sign(payload);
 
-      // Retourner l'utilisateur et le token
-      return { user: savedUser, token };
-    } catch (error) {
-      throw new InternalServerErrorException(
-        "Erreur lors de la création de l'utilisateur: " + error.message,
-      );
-    }
+    // Retourner l'utilisateur et le token
+    return { user: savedUser, token };
   }
 
   // Récupérer tous les utilisateurs
@@ -82,7 +76,7 @@ export class UserService {
     try {
       const { password, ...rest } = updateUserDto;
 
-      let updatedUserDto: any = { ...rest };
+      const updatedUserDto: any = { ...rest };
 
       // Si un mot de passe est fourni, le hacher et l'ajouter à updatedUserDto
       if (password) {
