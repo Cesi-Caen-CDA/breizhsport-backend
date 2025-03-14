@@ -2,6 +2,7 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 
 @Module({
   imports: [
@@ -9,10 +10,20 @@ import mongoose from 'mongoose';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        // eslint-disable-next-line prettier/prettier
-        uri: configService.get<string>('DATABASE_URL'),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const isTestEnv = process.env.NODE_ENV === 'test';
+        if (isTestEnv) {
+          // Si on est en mode test, utiliser Mongo en mémoire
+          const mongoServer = await MongoMemoryServer.create();
+          const mongoUri = mongoServer.getUri();
+          return { uri: mongoUri };
+        } else {
+          // Sinon, utiliser la configuration de production ou développement
+          return {
+            uri: configService.get<string>('MONGO_URI'), // On récupère l'URI de production ou dev à partir du fichier .env
+          };
+        }
+      },
     }),
   ],
   exports: [MongooseModule],

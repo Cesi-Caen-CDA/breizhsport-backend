@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   nestjs-app:
     build:
@@ -7,11 +9,11 @@ services:
       - '3000:3000'
     environment:
       NODE_ENV: development
-      MONGO_URI: mongodb://root:root@mongo:27017/breizhsport?authSource=admin # Connexion à MongoDB avec l'URI
+      MONGO_URI: mongodb://root:root@mongo:27017/breizhsport?authSource=admin
     volumes:
-      - ./src:/usr/src/app/src # Synchronise les fichiers locaux avec le conteneur
-      - ./node_modules:/usr/src/app/node_modules # Ignore les node_modules locaux
-    command: npm run start
+      - ./src:/usr/src/app/src # Synchronisation des fichiers source
+      - /usr/src/app/node_modules # Assure que node_modules dans le conteneur est utilisé
+    command: npm run start:dev
     depends_on:
       - mongo
     networks:
@@ -46,7 +48,7 @@ services:
       - mongo-compose-network
 
 volumes:
-  mongo-data: # Volume pour persister les données de MongoDB
+  mongo-data:
 
 networks:
   mongo-compose-network:

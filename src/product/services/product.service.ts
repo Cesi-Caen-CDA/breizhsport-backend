@@ -4,35 +4,68 @@ import { Model } from 'mongoose';
 import { Product } from '../schemas/product.schema';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectModel(Product.name) private readonly productModel: Model<Product>,
   ) {}
-  async create(createUserDto: CreateProductDto): Promise<Product> {
-    const product = new this.productModel(createUserDto);
-    return product.save();
+  async create(createProductDto: CreateProductDto): Promise<Product> {
+    try {
+      // Création du produit à partir du DTO
+      const product = new this.productModel(createProductDto);
+
+      // Sauvegarde du produit dans la base de données
+      return await product.save();
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Erreur interne lors de la création du produit. Veuillez réessayer plus tard.',
+      );
+    }
   }
 
   async findAll(): Promise<Product[]> {
-    return this.productModel.find().exec();
+    try {
+      return await this.productModel.find().exec();
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException('Failed to retrieve products');
+    }
   }
 
-  async findOne(id: string): Promise<Product | null> {
-    return this.productModel.findById(id).exec();
+  async findOne(id: string): Promise<Product> {
+    const product = await this.productModel.findById(id).exec();
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+    return product;
   }
 
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
   ): Promise<Product> {
-    return this.productModel
+    const updatedProduct = await this.productModel
       .findByIdAndUpdate(id, updateProductDto, { new: true })
       .exec();
+
+    if (!updatedProduct) {
+      throw new NotFoundException(`Le produit avec l'id ${id} n'existe pas.`);
+    }
+
+    return updatedProduct;
   }
 
   async remove(id: string): Promise<void> {
-    await this.productModel.findByIdAndDelete(id).exec();
+    const deletedProduct = await this.productModel.findByIdAndDelete(id).exec();
+
+    if (!deletedProduct) {
+      throw new NotFoundException(`Le produit avec l'id ${id} n'existe pas.`);
+    }
   }
 }

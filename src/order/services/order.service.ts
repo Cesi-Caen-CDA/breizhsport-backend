@@ -1,95 +1,105 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { Order } from '../schemas/order.schema';
 import { CartService } from '../../cart/services/cart.service';
-import { User } from '../../user/schemas/user.schema';
 import { Product } from '../../product/schemas/product.schema';
+import { CreateOrderDto } from '../dto/create-order.dto';
+import { UpdateOrderDto } from '../dto/update-order.dto';
 
 @Injectable()
 export class OrderService {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<Order>,
     private cartService: CartService,
-    @InjectModel(Product.name) private productModel: Model<Product>, // Ajouter le modèle Product
+    @InjectModel(Product.name) private productModel: Model<Product>,
   ) {}
 
-  // Créer une commande à partir d'un panier validé
-  async createOrder(user: User): Promise<Order> {
-    const cart = await this.cartService.checkout(user); // Checkout panier
-    if (!cart) {
-      throw new Error('Panier invalide');
+  async createOrder(createOrderDto: CreateOrderDto): Promise<Order> {
+    const { userId, products } = createOrderDto;
+
+    // Vérifier le panier
+    const cart = await this.cartService.getCartForUser(userId);
+    if (!cart || cart.products.length === 0) {
+      throw new NotFoundException('Le panier est vide ou invalide.');
     }
 
-    // Vérification du stock pour chaque produit dans le panier
-    for (const item of cart.products) {
-      const product = item.product as Product;
-
-      // Vérifiez si le produit a suffisamment de stock
+    // Vérification du stock
+    for (const item of products) {
+      const product = await this.productModel.findById(item.productId);
+      if (!product) {
+        throw new NotFoundException(
+          `Produit avec ID ${item.productId} non trouvé.`,
+        );
+      }
       if (product.stock < item.quantity) {
-        throw new Error(`Stock insuffisant pour le produit ${product.name}`);
+        throw new NotFoundException(
+          `Stock insuffisant pour le produit ${product.name}.`,
+        );
       }
     }
 
-    // Calcul du prix total de la commande
-    const totalPrice = cart.products.reduce((total, item) => {
-      // Vérifiez si item.product est de type Product
-      if ('price' in item.product) {
-        return total + (item.product as Product).price * item.quantity;
-      }
-      throw new Error('Produit invalide dans le panier');
-    }, 0);
+    // Calcul du prix total
+    let totalPrice = 0;
+    for (const item of products) {
+      const product = await this.productModel.findById(item.productId);
+      totalPrice += product.price * item.quantity;
+    }
 
     // Créer la commande
-    const order = new this.orderModel({
-      user: user._id,
-      products: cart.products.map((item) => {
-        if ('price' in item.product) {
-          return {
-            product: (item.product as Product)._id,
-            quantity: item.quantity,
-            price: (item.product as Product).price,
-          };
-        }
-        throw new Error('Produit invalide dans le panier');
-      }),
+    const order = await this.orderModel.create({
+      user: userId,
+      products: products.map((item) => ({
+        product: item.productId,
+        quantity: item.quantity,
+        price: 0, // Le prix sera peuplé après
+      })),
       totalPrice,
       status: 'pending',
       createdAt: new Date(),
     });
 
-    // Sauvegarder la commande
-    await order.save();
-
-    // Mise à jour du stock des produits
-    for (const item of cart.products) {
-      const product = item.product as Product;
-      // Réduire le stock du produit en fonction de la quantité commandée
-      await this.productModel.findByIdAndUpdate(product._id, {
+    // Mise à jour du stock
+    for (const item of products) {
+      await this.productModel.findByIdAndUpdate(item.productId, {
         $inc: { stock: -item.quantity },
       });
     }
 
-    // Retourner la commande
     return order;
   }
 
   async getOrderHistory(userId: string): Promise<Order[]> {
     const orderHistory = await this.orderModel
-      .find({
-        user: userId, // Filtrer par utilisateur
-      })
-      .populate({
-        path: 'products.product', // Peupler les informations des produits
-        select: 'name price category description stock', // Sélectionner les champs nécessaires
-      });
+      .find({ user: userId, status: 'completed' })
+      .populate('products.product', 'name price category description stock');
 
     if (!orderHistory || orderHistory.length === 0) {
-      throw new Error(
-        'Aucun historique de commandes trouvé pour cet utilisateur',
+      throw new NotFoundException(
+        'Aucun historique de commandes trouvé pour cet utilisateur.',
       );
     }
 
     return orderHistory;
+  }
+
+  async updateOrder(id: string): Promise<Order> {
+    const updatedOrder = await this.orderModel.findByIdAndUpdate(
+      id,
+      {
+        status: 'completed',
+      },
+      { new: true },
+    );
+
+    if (!updatedOrder) {
+      throw new NotFoundException(`Commande avec l'ID ${id} non trouvée.`);
+    }
+
+    return updatedOrder;
   }
 }

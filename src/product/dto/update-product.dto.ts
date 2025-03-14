@@ -5,9 +5,15 @@ import {
   IsOptional,
   Min,
   IsPositive,
+  MinLength,
 } from 'class-validator';
 
 export class UpdateProductDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(3, { message: 'La nom doit comporter au moins 3 caractères.' })
+  name?: number;
+
   @IsOptional()
   @IsNumber()
   @IsPositive({ message: 'Le prix doit être un nombre positif.' })
@@ -15,7 +21,9 @@ export class UpdateProductDto {
 
   @IsOptional()
   @IsString()
-  @Min(3, { message: 'La catégorie doit comporter au moins 3 caractères.' })
+  @MinLength(3, {
+    message: 'La catégorie doit comporter au moins 3 caractères.',
+  })
   category?: string;
 
   @IsOptional()

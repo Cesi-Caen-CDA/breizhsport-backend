@@ -1,8 +1,20 @@
 // src/cart/controllers/cart.controller.ts
-import { Controller, Post, Param, Body, Get, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Body,
+  Get,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { CartService } from '../services/cart.service';
 import { UserService } from '../../user/services/user.service';
+import { AuthGuard } from '../../auth/guards/auth.guard';
+import { Types } from 'mongoose';
 
+// Vérifie que l'utilisateur est authentifié
+@UseGuards(AuthGuard)
 @Controller('carts')
 export class CartController {
   constructor(
@@ -16,8 +28,16 @@ export class CartController {
     @Body('userId') userId: string,
     @Body('quantity') quantity: number,
   ) {
-    const user = await this.userService.findOne(userId);
-    return this.cartService.addProductToCart(user, productId, quantity);
+    try {
+      return await this.cartService.addProductToCart(
+        userId,
+        productId,
+        quantity,
+      );
+    } catch (error) {
+      console.log('Voici les erreurs : ', error);
+      throw error;
+    }
   }
 
   @Get(':userId')
@@ -30,7 +50,6 @@ export class CartController {
     @Param('productId') productId: string,
     @Body('userId') userId: string,
   ) {
-    const user = await this.userService.findOne(userId);
-    return this.cartService.removeProductFromCart(user, productId);
+    return this.cartService.removeProductFromCart(userId, productId);
   }
 }
