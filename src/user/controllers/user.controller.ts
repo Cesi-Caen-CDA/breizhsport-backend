@@ -10,6 +10,7 @@ import {
   Patch,
   UsePipes,
   ValidationPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
@@ -24,7 +25,11 @@ export class UserController {
   // Créer un utilisateur
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+    try {
+      return await this.userService.create(createUserDto);
+    } catch (error) {
+      throw new BadRequestException(error.message); // Transmet l'erreur au frontend
+    }
   }
 
   // Récuperer tout les utilisateurs
