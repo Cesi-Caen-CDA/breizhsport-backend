@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build
 
 # Expose le port sur lequel NestJS fonctionne
-EXPOSE 3000
+EXPOSE 8000
 
 # Commande pour démarrer l'application en mode développement
 CMD ["npm", "run", "start:dev"]
