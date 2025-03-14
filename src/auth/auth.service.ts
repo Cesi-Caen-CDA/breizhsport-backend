@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/services/user.service';
 import { AuthType } from './types/auth.type';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class AuthService {
@@ -17,7 +18,7 @@ export class AuthService {
     authBody,
   }: {
     authBody: AuthType;
-  }): Promise<{ token: string; message: string }> {
+  }): Promise<{ userId: string; token: string; message: string }> {
     const { email, password } = authBody;
 
     const user = await this.userService.findOneByEmail(email);
@@ -30,10 +31,13 @@ export class AuthService {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
-    const payload = { userId: user._id, email: user.email };
+    // ✅ Assurer que `user._id` est bien un ObjectId et le convertir en string
+    const userId: string = (user._id as Types.ObjectId).toString();
+
+    const payload = { userId, email: user.email };
     const token = this.jwtService.sign(payload);
 
-    return { token, message: 'Authentification réussie.' };
+    return { userId, token, message: 'Authentification réussie.' };
   }
 
   async logout(token: string): Promise<{ message: string }> {
