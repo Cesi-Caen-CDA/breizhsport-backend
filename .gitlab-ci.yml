@@ -1,0 +1,59 @@
+stages:
+  - build
+  - test
+  - build-docker-image
+  - deploy
+
+Build-nodejs-app:
+  image: node:20-alpine
+  stage: build
+  script:
+    - npm install
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+  artifacts:
+    paths:
+      - node_modules/
+
+Test-nodejs-app:
+  image: node:20-alpine
+  stage: test
+  script:
+    - npm test
+  dependencies:
+    - Build-nodejs-app
+
+
+Build-docker-image:
+  image: docker:20.10.16
+  stage: build-docker-image
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker info
+    - docker build -t my-nodejs-app .
+    - docker save -o my-nodejs-app.tar my-nodejs-app
+  artifacts:
+    paths:
+      - my-nodejs-app.tar
+
+Push-docker-image:
+  image: docker:20.10.16
+  stage: deploy
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_TLS_CERTDIR: ""
+  dependencies:
+    - Build-docker-image
+  script:
+    - docker load -i my-nodejs-app.tar
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - docker tag my-nodejs-app $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
+    - docker push $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
