@@ -1,0 +1,75 @@
+variables:
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  GIT_DEPTH: "0"
+
+stages:
+  - build
+  - test
+  - sonarqube
+  - build-docker-image
+  - deploy
+
+Build-nodejs-app:
+  image: node:20-alpine
+  stage: build
+  script:
+    - npm install
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+  artifacts:
+    paths:
+      - node_modules/
+
+Test-nodejs-app:
+  image: node:20-alpine
+  stage: test
+  script:
+    - npm test
+  dependencies:
+    - Build-nodejs-app
+
+sonarcloud-check:
+  stage: sonarqube
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner
+
+Build-docker-image:
+  image: docker:20.10.16
+  stage: build-docker-image
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker info
+    - docker build -t my-nodejs-app .
+    - docker save -o my-nodejs-app.tar my-nodejs-app
+  artifacts:
+    paths:
+      - my-nodejs-app.tar
+
+Push-docker-image:
+  image: docker:20.10.16
+  stage: deploy
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_TLS_CERTDIR: ""
+  dependencies:
+    - Build-docker-image
+  script:
+    - docker load -i my-nodejs-app.tar
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - docker tag my-nodejs-app $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
+    - docker push $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
