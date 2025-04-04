@@ -1,5 +1,6 @@
 // src/user/controllers/user.controller.ts
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,7 +9,6 @@ import {
   Patch,
   Post,
   UseGuards,
-  UsePipes,  
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '../../auth/guards/auth.guard';
@@ -37,7 +37,7 @@ export class UserController {
     try {
       return await this.userService.create(createUserDto);
     } catch (error) {
-      throw new BadRequestException(error.message); // Transmet l'erreur au frontend
+      throw new BadRequestException(error.message);
     }
   }
   @ApiOperation({ summary: 'Récuperer tous les utilisateurs' })
