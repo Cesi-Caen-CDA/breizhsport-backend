@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpStatus,
   Param,
   Post,
   UseGuards,
@@ -19,6 +20,7 @@ import { AuthGuard } from '../../auth/guards/auth.guard';
 import { UserService } from '../../user/services/user.service';
 import { AddToCartDto } from '../dto/add-to-cart.dto';
 import { RemoveFromCartDto } from '../dto/remove-from-cart.dto';
+import { Cart } from '../schemas/cart.schema'; // Importe o schema Cart
 import { CartService } from '../services/cart.service';
 
 @ApiTags('cart')
@@ -41,27 +43,12 @@ export class CartController {
   })
   @ApiBody({ type: AddToCartDto })
   @ApiResponse({
-    status: 201,
+    status: HttpStatus.CREATED,
     description: 'Produit ajouté au panier avec succès',
-    schema: {
-      properties: {
-        _id: { type: 'string' },
-        user: { type: 'string' },
-        products: {
-          type: 'array',
-          items: {
-            properties: {
-              product: { type: 'string' },
-              quantity: { type: 'number' },
-            },
-          },
-        },
-        checkedOut: { type: 'boolean' },
-      },
-    },
+    type: Cart, // Use o schema Cart para descrever a resposta
   })
   @ApiResponse({
-    status: 404,
+    status: HttpStatus.NOT_FOUND,
     description: 'Produit ou utilisateur non trouvé',
   })
   async addProductToCart(
@@ -83,33 +70,9 @@ export class CartController {
     required: true,
   })
   @ApiResponse({
-    status: 200,
+    status: HttpStatus.OK,
     description: 'Panier récupéré avec succès',
-    schema: {
-      properties: {
-        _id: { type: 'string' },
-        user: { type: 'string' },
-        products: {
-          type: 'array',
-          items: {
-            properties: {
-              product: {
-                properties: {
-                  _id: { type: 'string' },
-                  name: { type: 'string' },
-                  price: { type: 'number' },
-                  category: { type: 'string' },
-                  description: { type: 'string' },
-                  stock: { type: 'number' },
-                },
-              },
-              quantity: { type: 'number' },
-            },
-          },
-        },
-        checkedOut: { type: 'boolean' },
-      },
-    },
+    type: Cart, // Use o schema Cart para descrever a resposta
   })
   async getCart(@Param('userId') userId: string) {
     return this.cartService.getCartForUser(userId);
@@ -124,26 +87,14 @@ export class CartController {
   })
   @ApiBody({ type: RemoveFromCartDto })
   @ApiResponse({
-    status: 200,
+    status: HttpStatus.OK,
     description: 'Produit supprimé du panier avec succès',
-    schema: {
-      properties: {
-        _id: { type: 'string' },
-        user: { type: 'string' },
-        products: {
-          type: 'array',
-          items: {
-            properties: {
-              product: { type: 'string' },
-              quantity: { type: 'number' },
-            },
-          },
-        },
-        checkedOut: { type: 'boolean' },
-      },
-    },
+    type: Cart, // Use o schema Cart para descrever a resposta (o panier atualisé)
   })
-  @ApiResponse({ status: 404, description: 'Produit ou panier non trouvé' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Produit ou panier non trouvé',
+  })
   async removeProductFromCart(
     @Param('productId') productId: string,
     @Body() removeFromCartDto: RemoveFromCartDto,
