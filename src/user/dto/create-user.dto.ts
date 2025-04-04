@@ -22,6 +22,7 @@ export class CreateUserDto {
   @IsString()
   @MinLength(2, { message: 'Le prénom doit contenir au moins 2 caractères.' })
   firstname: string;
+
   @ApiProperty({
     description: "L'adresse email de l'utilisateur",
     type: String,
@@ -30,6 +31,7 @@ export class CreateUserDto {
   })
   @IsEmail({}, { message: 'Email invalide.' })
   email: string;
+
   @ApiProperty({
     description: "Le mot de passe de l'utilisateur",
     example: 'password-utilisateur',
