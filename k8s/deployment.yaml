@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: breizhsport-back-gotham-deployment
+  labels:
+    app: breizhsport-back-gotham
+spec:
+  replicas: 1  # Nombre de réplicas pour l'API, tu peux l'ajuster
+  selector:
+    matchLabels:
+      app: breizhsport-back-gotham
+  template:
+    metadata:
+      labels:
+        app: breizhsport-back-gotham
+      annotations:
+          redeploy: "true-${CI_COMMIT_SHORT_SHA}"
+    spec:
+      containers:
+        
+name: breizhsport-back-gotham-container
+        image: "breizhsportpabloregistry.azurecr.io/${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+        imagePullPolicy: Always
+        ports:
+containerPort: 3000 # Port exposé par ton API (par exemple pour Spring Boot, généralement 8080)
+      resources:
+        requests:
+          memory: "256Mi"  # Demande de mémoire
+          cpu: "100m"      # Demande de CPU
+        limits:
+          memory: "512Mi"  # Limite de mémoire
+          cpu: "250m"      # Limite de CPU
