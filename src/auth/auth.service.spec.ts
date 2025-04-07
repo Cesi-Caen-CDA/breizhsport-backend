@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
-import { UserService } from '../user/services/user.service';
-import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+import { UserService } from '../user/services/user.service';
+import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -60,6 +60,7 @@ describe('AuthService', () => {
         email: mockUser.email,
       });
       expect(result).toEqual({
+        userId: 'userId123',
         token: 'jwtToken123',
         message: 'Authentification réussie.',
       });
