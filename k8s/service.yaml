@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: breizhsport-back-gotham-service
+spec:
+  selector:
+    app: breizhsport-back-gotham  # Correspond aux pods créés par le déploiement
+  ports:
+    
+protocol: TCP
+    port: 81  # Le port exposé à l'extérieur du cluster
+    targetPort: 3000  # Le port du conteneur où ton API écoute
+type: LoadBalancer  # Pour exposer le service à l'extérieur du cluster via une IP publique
