@@ -1,11 +1,13 @@
 // src/cart/controllers/cart.controller.spec.ts
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { CartController } from './cart.controller';
-import { CartService } from '../services/cart.service';
-import { UserService } from '../../user/services/user.service';
 import { Types } from 'mongoose';
 import { AuthGuard } from '../../auth/guards/auth.guard';
-import { NotFoundException } from '@nestjs/common';
+import { UserService } from '../../user/services/user.service';
+import { AddToCartDto } from '../dto/add-to-cart.dto';
+import { RemoveFromCartDto } from '../dto/remove-from-cart.dto';
+import { CartService } from '../services/cart.service';
+import { CartController } from './cart.controller';
 
 describe('CartController', () => {
   let cartController: CartController;
@@ -72,22 +74,53 @@ describe('CartController', () => {
       const userId = mockUser._id.toString();
       const quantity = 2;
 
-      // Exécute l'ajout du produit au panier
-      const result = await cartController.addProductToCart(
-        productId,
-        userId,
-        quantity,
-      );
+      const dto: AddToCartDto = {
+        userId: userId,
+        quantity: quantity,
+      };
 
-      // Vérifie que `cartService.addProductToCart` est bien appelé avec les bons paramètres
+      const result = await cartController.addProductToCart(productId, dto);
+
       expect(cartService.addProductToCart).toHaveBeenCalledWith(
         userId,
         productId,
         quantity,
       );
-
-      // Vérifie que le résultat est correct
       expect(result).toEqual(mockCart);
+    });
+
+    it('devrait lever une erreur si le produit est introuvable', async () => {
+      const productId = new Types.ObjectId().toString();
+      const userId = mockUser._id.toString();
+      const dto: AddToCartDto = {
+        userId: userId,
+        quantity: 1,
+      };
+
+      mockCartService.addProductToCart.mockRejectedValueOnce(
+        new NotFoundException('Produit non trouvé'),
+      );
+
+      await expect(
+        cartController.addProductToCart(productId, dto),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('devrait lever une erreur si la quantité est invalide', async () => {
+      const productId = new Types.ObjectId().toString();
+      const userId = mockUser._id.toString();
+      const dto: AddToCartDto = {
+        userId: userId,
+        quantity: -1,
+      };
+
+      mockCartService.addProductToCart.mockRejectedValueOnce(
+        new NotFoundException('Quantité invalide'),
+      );
+
+      await expect(
+        cartController.addProductToCart(productId, dto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -117,10 +150,11 @@ describe('CartController', () => {
       const productId = mockProductId.toString();
       const userId = mockUser._id.toString();
 
-      const result = await cartController.removeProductFromCart(
-        productId,
-        userId,
-      );
+      const dto: RemoveFromCartDto = {
+        userId: userId,
+      };
+
+      const result = await cartController.removeProductFromCart(productId, dto);
 
       expect(cartService.removeProductFromCart).toHaveBeenCalledWith(
         userId,
